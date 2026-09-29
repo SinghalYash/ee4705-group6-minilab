@@ -1,0 +1,23 @@
+scene_file: sandbox_scene/test_scene.xml
+note: Ground truth for d logging/evaluation ONLY. Never used for steering.
+objects:
+- name: chair_green
+  class: chair
+  color: green
+  x: 3.0
+  y: 1.2
+- name: chair_red
+  class: chair
+  color: red
+  x: 3.0
+  y: -1.2
+- name: chair_blue
+  class: chair
+  color: blue
+  x: -2.5
+  y: 1.5
+- name: stop_sign
+  class: stop sign
+  color: red
+  x: -1.5
+  y: -3.0
