@@ -16,6 +16,7 @@ import mujoco
 import numpy as np
 import onnxruntime as ort
 import yaml
+import threading
 
 
 # All in-repo resources are located relative to this file, so running does not
@@ -31,6 +32,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from task_2.camera_pipeline import FrontCameraPipeline
+from task_2.motion_skills import MotionSkills
 
 try:
     from runtime_control import (
@@ -256,17 +258,20 @@ elif evdev is None:
 GLFW_KEY_R = 82;  GLFW_KEY_F = 70
 GLFW_KEY_Z = 90;  GLFW_KEY_T = 84
 GLFW_KEY_Y = 89;  GLFW_KEY_X = 88
+GLFW_KEY_C = 67
 GLFW_KEY_SPACE = 32
+
 
 # Global state
 height_cmd = 0.25
 reset_flag = False
 print_action_flag = False
+capture_camera_flag = False
 
 
 def key_callback(keycode):
     """MuJoCo keyboard callback — function keys only"""
-    global height_cmd, reset_flag, print_action_flag
+    global height_cmd, reset_flag, print_action_flag, capture_camera_flag
     if keycode == GLFW_KEY_R:
         height_cmd = max(0.20, height_cmd - 0.02)
     elif keycode == GLFW_KEY_F:
@@ -279,6 +284,8 @@ def key_callback(keycode):
         print_action_flag = not print_action_flag
     elif keycode == GLFW_KEY_X:
         _pressed_keys.clear()
+    elif keycode == GLFW_KEY_C:
+        capture_camera_flag = True
     elif keycode == GLFW_KEY_SPACE and "runtime" in globals():
         runtime.request_push()
 
@@ -378,8 +385,11 @@ def build_runtime_config(args, kps, kds):
         kp=kps[0],
         kd=kds[0],
         torque_limit=TAU_LIMIT_CALF,
-        initial_position=map_spawns["rc26_track"]["position"],
-        initial_quaternion=map_spawns["rc26_track"]["quaternion"],
+        # initial_position=map_spawns["rc26_track"]["position"],
+        # initial_quaternion=map_spawns["rc26_track"]["quaternion"],
+        initial_position=map_spawns["task2_scene"]["position"],
+        initial_quaternion=map_spawns["task2_scene"]["quaternion"],
+
         command=(1.0, 1.0, 1.0, 0.25),
         height_range=(0.2, 0.35),
         cameras=CAMERA_OPTIONS,
@@ -519,7 +529,8 @@ if __name__ == "__main__":
         perception_hz=15.0,
     )
 
-   
+    motion_skills = MotionSkills()
+    
 
     print(f"\n[VERIFY] MuJoCo joint order:")
     for i in range(mj_model.njnt):
@@ -554,7 +565,7 @@ if __name__ == "__main__":
               "RL_hip","RL_thigh","RL_calf","RR_hip","RR_thigh","RR_calf"]
     count = 0
     inference_count = 0
-    camera_test_saved = False
+    turn_test_started = False
 
     # Warm-up
     for _ in range(HISTORY_LEN):
@@ -603,15 +614,53 @@ if __name__ == "__main__":
 
             # The browser and the physical keyboard both update the motion
             # command. Without --gui the original keyboard logic is kept.
-            if runtime.update_command(_pressed_keys):
-                cmd = np.array([
+            # if runtime.update_command(_pressed_keys):
+            #     cmd = np.array([
+            #         runtime_config["command"]["linear_x"],
+            #         runtime_config["command"]["linear_y"],
+            #         runtime_config["command"]["yaw"],
+            #     ], dtype=np.float32)
+            #     height_cmd = runtime_config["command"]["height"]
+            # else:
+            #     cmd = get_commands()
+
+            # Keep browser/keyboard state updated.
+            browser_command_active = runtime.update_command(_pressed_keys)
+
+            if browser_command_active:
+                manual_cmd = np.array([
                     runtime_config["command"]["linear_x"],
                     runtime_config["command"]["linear_y"],
                     runtime_config["command"]["yaw"],
                 ], dtype=np.float32)
+
                 height_cmd = runtime_config["command"]["height"]
             else:
-                cmd = get_commands()
+                manual_cmd = get_commands()
+
+            # Task 2 autonomous motion source.
+            skill_cmd, skill_has_control = motion_skills.update(mj_data)
+
+            if skill_has_control:
+                cmd = skill_cmd
+            else:
+                cmd = manual_cmd
+            # Temporary Task 2(iv) closed-loop turn test.
+            if not turn_test_started and mj_data.time >= 1.0:
+
+                def test_turn():
+                    print("[TEST] starting closed-loop 90-degree turn")
+
+                    success = motion_skills.turn(90.0)
+
+                    print(f"[TEST] turn success={success}")
+
+                threading.Thread(
+                    target=test_turn,
+                    daemon=True,
+                ).start()
+
+                turn_test_started = True
 
             runtime_state = runtime.runtime_control(mj_model, mj_data)
             if runtime.consume_reset():
@@ -724,11 +773,14 @@ if __name__ == "__main__":
 
             # Task 2(ii): render the onboard front camera at 15 Hz.
             new_frame = camera_pipeline.update(mj_data)
-
-            if new_frame and not camera_test_saved and mj_data.time >= 1.0:
+            if capture_camera_flag:
                 output_path = PROJECT_ROOT / "task_2" / "front_camera_test.png"
-                camera_pipeline.save_latest_frame(str(output_path))
-                camera_test_saved = True
+
+                if camera_pipeline.save_latest_frame(str(output_path)):
+                    print("[CAMERA] capture complete")
+
+                capture_camera_flag = False
+          
 
             
             if count % (control_decimation * 50) == 0:

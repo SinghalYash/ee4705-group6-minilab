@@ -14,11 +14,12 @@ from ultralytics import YOLO
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-IMAGE_PATH = PROJECT_ROOT / "task_2" / "front_camera_test.png"
+IMAGE_PATH = PROJECT_ROOT / "task_2" / "stop_sign_test.png"
 OUTPUT_DIR = PROJECT_ROOT / "task_2" / "yolo_test"
 
 
 def main():
+    print(f"[YOLO TEST] source={IMAGE_PATH}")
     model = YOLO("yolo11n.pt")
 
     results = model.predict(
