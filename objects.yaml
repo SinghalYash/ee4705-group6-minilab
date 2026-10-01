@@ -1,4 +1,4 @@
-scene_file: sandbox_scene/test_scene.xml
+scene_file: task_2/scene/task2_scene.xml
 note: Ground truth for d logging/evaluation ONLY. Never used for steering.
 objects:
 - name: chair_green
