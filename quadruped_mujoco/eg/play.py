@@ -34,6 +34,7 @@ from task_2.camera_pipeline import FrontCameraPipeline
 
 try:
     from runtime_control import (
+        MapSpec,
         MotorCommandDelay,
         RuntimeScene,
         bundled_map_specs,
@@ -49,6 +50,7 @@ except ModuleNotFoundError as exc:
         raise
     sys.path.insert(0, str(PACKAGE_SRC))
     from runtime_control import (
+        MapSpec,
         MotorCommandDelay,
         RuntimeScene,
         bundled_map_specs,
@@ -65,6 +67,18 @@ DEFAULT_CONFIG = DEMO_DIR / "dog.yaml"
 DEFAULT_ONNX = DEMO_DIR / "model_3400.onnx"
 DEFAULT_ROBOT_XML = DEMO_DIR / "dog" / "xml" / "dog_terrain.xml"
 MAP_SPECS = bundled_map_specs()
+
+TASK2_SCENE = (
+    PROJECT_ROOT
+    / "task_2"
+    / "scene"
+    / "task2_scene.xml"
+)
+
+MAP_SPECS["task2_scene"] = MapSpec(
+    path=TASK2_SCENE,
+    strict=True,
+)
 
 # compose_scene injects these under "trunk"; they move and rotate with the robot.
 ROBOT_CAMERAS = make_standard_robot_cameras(prefix="dog")
@@ -354,6 +368,7 @@ def build_runtime_config(args, kps, kds):
         "suspended_steps": "Suspended Steps",
         "perlin_rough": "Perlin Rough Terrain",
         "dynamic_obstacles": "Dynamic Obstacles",
+        "task2_scene": "Task 2 Object Scene",
     }
     return make_runtime_config(
         gui=args.gui,

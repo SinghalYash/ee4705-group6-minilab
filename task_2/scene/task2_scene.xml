@@ -1,5 +1,5 @@
-<mujoco model="task4_test_scene">
-  <!-- Student C sandbox scene. Terrain-only (no joints) so MapSpec accepts it. -->
+<mujoco model="task2_object_scene">
+  <!-- Task 2 custom object scene. Static bodies only for MapSpec compatibility. -->
   <compiler meshdir="." texturedir="."/>  
   <asset>
     <texture name="floor_tex" type="2d" builtin="checker" rgb1="0.72 0.72 0.70" rgb2="0.62 0.62 0.60" width="512" height="512"/>

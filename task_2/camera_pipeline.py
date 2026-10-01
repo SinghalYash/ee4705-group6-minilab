@@ -24,8 +24,8 @@ class FrontCameraPipeline:
         self,
         model: mujoco.MjModel,
         camera_name: str = "dog_front_camera",
-        width: int = 640,
-        height: int = 480,
+        width: int = 320,
+        height: int = 240,
         perception_hz: float = 15.0,
     ):
         self.model = model

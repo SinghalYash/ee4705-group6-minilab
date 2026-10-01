@@ -7,3 +7,6 @@ env/
 
 *.pt
 .build/
+
+# Task 2 generated test outputs
+task_2/yolo_test/
