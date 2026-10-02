@@ -1,7 +1,8 @@
 """Check that YOLO detects every scene object, with the right colour, over range.
 
 Places the robot (no physics) at several distances and viewing angles around
-each object in config/objects.yaml, renders the front camera, runs the Task 4
+each object in objects.yaml, renders the front camera at the Task 2 pipeline
+resolution (320x240) in A's Task 2 scene, runs the Task 4
 detector and reports detection + colour-grounding rates. Saves an annotated
 contact sheet to results/detection_check.png.
 
@@ -22,21 +23,21 @@ import numpy as np
 import yaml
 
 from perception import Detector, draw_detections, normalize_class
-from sim_backend import SandboxSim
+from sim_backend import TASK2_SCENE, SandboxSim  # static renders only
 
 HERE = Path(__file__).resolve().parent.parent
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--scene", default=str(HERE /"test_scene_placeholder_for_task4.xml"))
+    ap.add_argument("--scene", default=str(TASK2_SCENE))
     ap.add_argument("--objects", default=str(HERE / "objects.yaml"))
     ap.add_argument("--dists", nargs="*", type=float,
                     default=[4.0, 3.0, 2.0, 1.5, 1.0, 0.8, 0.7, 0.6])
     ap.add_argument("--angles", nargs="*", type=float, default=[-40, -20, 0, 20, 40])
     args = ap.parse_args()
 
-    sim = SandboxSim(Path(args.scene))
+    sim = SandboxSim(Path(args.scene), width=320, height=240)
     det = Detector()
     objs = yaml.safe_load(Path(args.objects).read_text())["objects"]
     sheet = []
@@ -57,9 +58,9 @@ def main():
                     per_d[d][2] += ds[0].color == o["color"]
                 if off == 0 and d in (args.dists[2], args.dists[-2]):
                     tile = draw_detections(img, ds, ds[0] if ds else None)
-                    cv2.putText(tile, f"{o['name']} @ {d} m", (10, 470),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                    sheet.append(cv2.resize(tile, (320, 240)))
+                    cv2.putText(tile, f"{o['name']} @ {d} m", (6, 232),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1)
+                    sheet.append(tile)
         for d, (n, hit, ok) in per_d.items():
             print(f"{o['name']:14s} {d:5.1f}m  {hit}/{n}       {ok}/{max(hit, 1)}")
     rows = [np.hstack(sheet[i:i + 4] + [np.zeros_like(sheet[0])] * (4 - len(sheet[i:i + 4])))
