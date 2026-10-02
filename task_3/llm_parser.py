@@ -1,12 +1,16 @@
 import json
-
-from openai import OpenAI
+import os
+from openai import OpenAI, BadRequestError
 from command_schema import COMMAND_SCHEMA
 
 from executor import execute_actions
 
 
-client = OpenAI()
+# client = OpenAI()
+
+client = OpenAI(api_key=os.environ["DASHSCOPE_API_KEY"],
+                base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1")
+MODEL = "qwen3-vl-flash"
 
 
 SYSTEM_PROMPT = """
@@ -68,45 +72,55 @@ RULES
 """
 
 
+def _call(messages, response_format):
+    return client.chat.completions.create(
+        model=MODEL,
+        messages=messages,
+        response_format=response_format,
+        extra_body={"enable_thinking": False},  # structured output isn't supported in Qwen thinking mode
+    )
+
+
 def parse_command(user_text, history=None):
     if history is None:
         history = []
 
-    messages = [
-        {
-            "role": "system",
-            "content": SYSTEM_PROMPT,
-        }
-    ]
-
-    # Add previous conversation turns
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     messages.extend(history)
+    messages.append({"role": "user", "content": user_text})
 
-    # Add the newest user command
-    messages.append(
-        {
-            "role": "user",
-            "content": user_text,
-        }
-    )
-
-    response = client.responses.create(
-        model="gpt-5-mini",
-        input=messages,
-        text={
-            "format": {
-                "type": "json_schema",
+    try:
+        response = _call(messages, {
+            "type": "json_schema",
+            "json_schema": {
                 "name": "robot_command",
                 "schema": COMMAND_SCHEMA,
                 "strict": True,
-            }
-        },
-    )
+            },
+        })
+    except BadRequestError:
+        # Fallback: JSON mode + schema in the prompt (DashScope requires the word "JSON" in the prompt)
+        messages[0] = {
+            "role": "system",
+            "content": SYSTEM_PROMPT
+            + "\n\nOUTPUT FORMAT\nReply ONLY with a JSON object matching this JSON schema:\n"
+            + json.dumps(COMMAND_SCHEMA),
+        }
+        response = _call(messages, {"type": "json_object"})
 
-    result = json.loads(response.output_text)
+    raw = response.choices[0].message.content.strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
+
+    result = json.loads(raw)
+
+    # Guard against schema drift in fallback mode
+    result.setdefault("accepted", False)
+    result.setdefault("actions", [])
+    if not result["accepted"] and not result.get("reason"):
+        result["reason"] = "invalid model output"
 
     return result
-
 
 def print_command(result):
     """Print the parsed command in the format required by the MiniLab."""
