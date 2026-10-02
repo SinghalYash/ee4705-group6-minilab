@@ -44,9 +44,14 @@ from perception import Detection, Detector, normalize_class
 
 @dataclass
 class CameraModel:
-    """Front-camera geometry. Defaults match the example repo's dog_front_camera."""
-    width: int = 640
-    height: int = 480
+    """Front-camera geometry.
+
+    Defaults match Task 2's FrontCameraPipeline (320x240) on the example
+    repo's dog_front_camera. On the platform, build it with from_mujoco() so
+    the image size comes from the pipeline and the geometry from the model.
+    """
+    width: int = 320
+    height: int = 240
     fovy_deg: float = 80.0
     tilt_deg: float = 14.04        # xyaxes "0 -1 0 0.242536 0 0.970143" -> atan(0.2425/0.9701)
     height_m: float = 0.49         # trunk ~0.33 m + camera z offset 0.16 m
@@ -55,6 +60,27 @@ class CameraModel:
     @property
     def f_px(self) -> float:
         return (self.height / 2) / math.tan(math.radians(self.fovy_deg) / 2)
+
+    @classmethod
+    def from_mujoco(cls, model, camera_name: str, width: int, height: int,
+                    trunk_height_m: float = 0.33) -> "CameraModel":
+        """Read fovy, tilt and mounting offset of a trunk-fixed camera from the
+        compiled MuJoCo model. width/height are the rendered image size (from
+        the camera pipeline). trunk_height_m is the nominal walking height of
+        the trunk origin (the camera offset is relative to it)."""
+        import mujoco  # local import: keep torch-before-mujoco order for callers
+
+        cam_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_CAMERA, camera_name)
+        if cam_id < 0:
+            raise ValueError(f"camera '{camera_name}' not in model")
+        rot = np.zeros(9)
+        mujoco.mju_quat2Mat(rot, model.cam_quat[cam_id])
+        look = -rot.reshape(3, 3)[:, 2]          # camera looks along its -z axis
+        tilt = math.degrees(math.asin(float(np.clip(-look[2], -1.0, 1.0))))
+        pos = model.cam_pos[cam_id]
+        return cls(width=int(width), height=int(height),
+                   fovy_deg=float(model.cam_fovy[cam_id]), tilt_deg=tilt,
+                   height_m=trunk_height_m + float(pos[2]), forward_m=float(pos[0]))
 
 
 # How to range each class. depth_offset: near face -> object centre (m).
@@ -223,8 +249,7 @@ class ApproachController:
             self.history.clear()
             self.last_bbox = None
             self._reset_range()
-            self.log(f"[SEARCH] target not visible, rotating "
-                     f"{'left' if self.turn_dir > 0 else 'right'}")
+            self.search_logged = False   # logged on the first frame without the target
         elif state == "CONFIRM":
             self.confirm_hits = 0
         for k, v in kw.items():
@@ -298,6 +323,10 @@ class ApproachController:
 
         # ------------------------------------------------------------ SEARCH
         if self.state == "SEARCH":
+            if not seen and not self.search_logged:
+                self.log(f"[SEARCH] target not visible, rotating "
+                         f"{'left' if self.turn_dir > 0 else 'right'}")
+                self.search_logged = True
             self.turned += abs(dyaw)
             if math.degrees(self.turned) >= self.next_turn_log:
                 self.log(f"[SEARCH] rotated {self.next_turn_log:.0f} deg, still searching")
