@@ -97,7 +97,10 @@ class Detector:
 
     def __init__(self, weights: str | None = None, conf: float = 0.25,
                  imgsz: int = 640, margin: float = 0.12):
-        weights = weights or os.environ.get("TASK4_YOLO_WEIGHTS", "yolo11n.pt")
+        # Default: the weights shipped in task_4/, independent of the working
+        # directory (Ultralytics downloads them if the file is missing).
+        default = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yolo11n.pt")
+        weights = weights or os.environ.get("TASK4_YOLO_WEIGHTS", default)
         self.model = YOLO(weights)
         self.names = self.model.names
         self.conf = conf
