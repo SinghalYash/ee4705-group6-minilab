@@ -1,4 +1,11 @@
-"""Standalone headless simulator for developing Task 4 before Task 2 lands.
+"""DEV ONLY (--dev-sandbox): Task 4's original standalone sandbox simulator.
+
+Not used by the default integrated path or by run_eval.py, which run on the
+Task 2 platform (play.py / platform_sim.PlatformSim with A's camera pipeline
+and motion skills). Kept for quick perception/controller debugging and for
+check_detection.py's static renders. It now loads A's Task 2 scene file.
+
+Original description: standalone headless simulator for developing Task 4 before Task 2 lands.
 
 It reuses the example repo's pieces unchanged (scene composition, the ONNX
 walking policy, the observation builder, the PD loop) and exposes the
@@ -32,7 +39,9 @@ sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "eg"))
 
 from runtime_control import MapSpec, compose_scene, compute_pd_torques, make_standard_robot_cameras
-import play
+from quadruped_mujoco.eg import play
+
+TASK2_SCENE = Path(__file__).resolve().parent.parent / "task_2" / "scene" / "task2_scene.xml"
 
 HERE = Path(__file__).resolve().parent.parent
 ROBOT_XML = REPO / "eg" / "dog" / "xml" / "dog_terrain.xml"
@@ -63,9 +72,9 @@ class SandboxSim:
 
     def __init__(
         self,
-        scene_xml: Path,
-        width: int = 640,
-        height: int = 480,
+        scene_xml: Path = TASK2_SCENE,
+        width: int = 320,
+        height: int = 240,
         perception_hz: float = 15.0,
         spawn=(0.0, 0.0, 0.0),
     ):
@@ -75,7 +84,7 @@ class SandboxSim:
         self.decimation = cfg["control_decimation"]
         self.cmd_scale = np.array(cfg["cmd_scale"], dtype=np.float32)
 
-        self.model = build_model(scene_xml, HERE / ".build")
+        self.model = build_model(scene_xml, Path(__file__).resolve().parent / ".build")
         self.model.opt.timestep = self.dt
         self.data = mujoco.MjData(self.model)
         self.policy = ort.InferenceSession(
@@ -196,6 +205,10 @@ class SandboxSim:
         mujoco.mj_forward(self.model, self.data)
         self.renderer.update_scene(self.data, camera=self.cam_id)
         return self.renderer.render().copy()
+
+    def camera_model(self):
+        from approach import CameraModel
+        return CameraModel.from_mujoco(self.model, FRONT_CAM, self.width, self.height)
 
     def camera_info(self):
         """Intrinsics/extrinsics Task 4 needs for monocular ranging."""
