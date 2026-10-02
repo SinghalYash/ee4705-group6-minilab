@@ -7,7 +7,6 @@ Task 2's actual motion-skills API.
 
 import time
 
-
 # ---------------------------------------------------------
 # Temporary Task 2 motion functions
 # ---------------------------------------------------------
@@ -83,3 +82,4 @@ def execute_actions(result):
         f"[DONE] actions={len(actions)} "
         f"t={elapsed:.1f} s"
     )
+

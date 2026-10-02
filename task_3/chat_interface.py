@@ -5,6 +5,8 @@ from executor import execute_actions
 
 import json
 
+import threading
+
 
 def run_chat():
     """Run the Task 3 terminal chat interface."""
@@ -45,6 +47,17 @@ def run_chat():
 
         print()
 
+def start_chat_thread():
+    """Start the terminal chat interface in a background thread."""
+
+    thread = threading.Thread(
+        target=run_chat,
+        daemon=True,
+    )
+
+    thread.start()
+
+    return thread
 
 if __name__ == "__main__":
     run_chat()
