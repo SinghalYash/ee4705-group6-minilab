@@ -474,7 +474,10 @@ def build_runtime_config(args, kps, kds):
         "quaternion": [1.0, 0.0, 0.0, 0.0],
     }
 
+    # The first entry is the map the runtime activates at start-up, so the
+    # Task 2 object scene must stay first (Tasks 3 and 4 run in it).
     map_labels = {
+        "task2_scene": "Task 2 Object Scene",
         "rc26_track": "26RC Track",
         "race_track": "Race Track",
         "stairs": "Stairs",
@@ -486,7 +489,6 @@ def build_runtime_config(args, kps, kds):
         "suspended_steps": "Suspended Steps",
         "perlin_rough": "Perlin Rough Terrain",
         "dynamic_obstacles": "Dynamic Obstacles",
-        "task2_scene": "Task 2 Object Scene",
     }
 
     return make_runtime_config(
@@ -585,6 +587,14 @@ if __name__ == "__main__":
         default=None,
         metavar="DEG",
         help="run one closed-loop relative turn test",
+    )
+
+    # Added for Task 4 by Student C: hide the 1 Hz [SIM] diagnostics so the
+    # [CMD]/[SEARCH]/[DETECT]/[FOUND]/[MISSION] lines stay readable in videos.
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="do not print the periodic [SIM] diagnostics line",
     )
 
     args = parser.parse_args()
@@ -735,6 +745,21 @@ if __name__ == "__main__":
     )
 
     motion_skills = MotionSkills()
+
+    # Integration hook (added for Task 4 by Student C). An outer script that
+    # runs this file with runpy.run_path(..., init_globals={"on_platform_ready":
+    # callback}) receives the live platform objects here, before the loop
+    # starts. Running play.py directly does not define the name, so nothing
+    # changes for normal use.
+    _on_platform_ready = globals().get("on_platform_ready")
+
+    if _on_platform_ready is not None:
+        _on_platform_ready(
+            camera_pipeline=camera_pipeline,
+            motion_skills=motion_skills,
+            model=mj_model,
+            data=mj_data,
+        )
 
     reset_robot(
         mj_model,
@@ -1158,7 +1183,8 @@ if __name__ == "__main__":
             # ----------------------------------------------------------
 
             if (
-                count
+                not args.quiet
+                and count
                 % (control_decimation * 50)
                 == 0
             ):
