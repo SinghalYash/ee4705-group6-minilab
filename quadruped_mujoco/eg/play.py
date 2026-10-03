@@ -324,6 +324,13 @@ GLFW_KEY_T = 84
 GLFW_KEY_Y = 89
 GLFW_KEY_X = 88
 GLFW_KEY_C = 67
+
+# Task 2 motion-skill shortcuts.
+GLFW_KEY_M = 77
+GLFW_KEY_J = 74
+GLFW_KEY_L = 76
+GLFW_KEY_B = 66
+
 GLFW_KEY_SPACE = 32
 
 
@@ -332,6 +339,53 @@ reset_flag = False
 print_action_flag = False
 capture_camera_flag = False
 
+def start_turn_skill(angle_deg):
+    """Run a closed-loop turn without blocking the simulation loop."""
+
+    if "motion_skills" not in globals():
+        print("[SKILL] MotionSkills is not ready yet.")
+        return
+
+    print(f"[SKILL] turn({angle_deg:+.1f} deg) requested")
+
+    threading.Thread(
+        target=motion_skills.turn,
+        args=(angle_deg,),
+        daemon=True,
+    ).start()
+
+
+def trigger_motion_skill(skill):
+    """Common Task 2 skill handler for native and browser shortcuts."""
+
+    if "motion_skills" not in globals():
+        print("[SKILL] MotionSkills is not ready yet.")
+        return
+
+    if skill == "move_forward":
+        print(
+            "[SKILL] M -> "
+            "move(vx=0.70, vy=0.00, wz=0.00, duration=3.0)"
+        )
+
+        motion_skills.move(
+            vx=0.70,
+            vy=0.0,
+            wz=0.0,
+            duration=3.0,
+        )
+
+    elif skill == "turn_left":
+        print("[SKILL] J -> turn(+90 deg)")
+        start_turn_skill(+90.0)
+
+    elif skill == "turn_right":
+        print("[SKILL] L -> turn(-90 deg)")
+        start_turn_skill(-90.0)
+
+    elif skill == "turn_back":
+        print("[SKILL] B -> turn(+180 deg)")
+        start_turn_skill(+180.0)
 
 def key_callback(keycode):
     global height_cmd
@@ -368,6 +422,18 @@ def key_callback(keycode):
 
     elif keycode == GLFW_KEY_C:
         capture_camera_flag = True
+
+    elif keycode == GLFW_KEY_M:
+        trigger_motion_skill("move_forward")
+
+    elif keycode == GLFW_KEY_J:
+        trigger_motion_skill("turn_left")
+
+    elif keycode == GLFW_KEY_L:
+        trigger_motion_skill("turn_right")
+
+    elif keycode == GLFW_KEY_B:
+        trigger_motion_skill("turn_back")
 
     elif (
         keycode == GLFW_KEY_SPACE
@@ -508,6 +574,34 @@ def build_runtime_config(args, kps, kds):
         height_range=(0.2, 0.35),
         cameras=CAMERA_OPTIONS,
         port=args.gui_port,
+
+        actions=[
+            {
+                "key": "skill_move_forward",
+                "label": "Timed Move",
+                "shortcut": "m",
+                "style": "secondary",
+            },
+            {
+                "key": "skill_turn_left",
+                "label": "Turn Left 90",
+                "shortcut": "j",
+                "style": "secondary",
+            },
+            {
+                "key": "skill_turn_right",
+                "label": "Turn Right 90",
+                "shortcut": "l",
+                "style": "secondary",
+            },
+            {
+                "key": "skill_turn_back",
+                "label": "Turn Back 180",
+                "shortcut": "b",
+                "style": "secondary",
+            },
+        ],
+
 
         tracking_camera={
             "camera_distance": 2.0,
@@ -858,9 +952,16 @@ if __name__ == "__main__":
 
     print(
         "\n"
-        "  W/S: forward/back   A/D: strafe   Q/E: turn\n"
-        "  R/F: height         T: reset      X: emergency stop\n"
-        "  C: capture onboard front-camera frame\n"
+        "  Manual locomotion:\n"
+        "    W/S: forward/back   A/D: strafe   Q/E: turn\n"
+        "\n"
+        "  Task 2 motion skills:\n"
+        "    M: timed move       J: turn +90 deg\n"
+        "    L: turn -90 deg     B: turn +180 deg\n"
+        "\n"
+        "  Other:\n"
+        "    R/F: height         T: reset\n"
+        "    X: emergency stop   C: capture camera\n"
     )
 
     display = scene.viewer(
@@ -972,6 +1073,24 @@ if __name__ == "__main__":
                 mj_model,
                 mj_data,
             )
+
+            # ----------------------------------------------------------
+            # Task 2 browser motion-skill shortcuts
+            # ----------------------------------------------------------
+
+            browser_actions = runtime.consume_actions()
+
+            if "skill_move_forward" in browser_actions:
+                trigger_motion_skill("move_forward")
+
+            if "skill_turn_left" in browser_actions:
+                trigger_motion_skill("turn_left")
+
+            if "skill_turn_right" in browser_actions:
+                trigger_motion_skill("turn_right")
+
+            if "skill_turn_back" in browser_actions:
+                trigger_motion_skill("turn_back")
 
             if runtime.consume_reset():
                 reset_flag = True
