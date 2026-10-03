@@ -12,19 +12,26 @@ def listen_for_command():
 
     recognizer = sr.Recognizer()
 
+    recognizer.dynamic_energy_threshold = True
+    recognizer.pause_threshold = 1.5
+    recognizer.non_speaking_duration = 0.8
+
     try:
         with sr.Microphone() as source:
-            print("[STT] Listening...")
+
+            print("[STT] Calibrating microphone...")
 
             recognizer.adjust_for_ambient_noise(
                 source,
                 duration=0.5,
             )
 
+            print("[STT] Listening...")
+
             audio = recognizer.listen(
                 source,
-                timeout=5,
-                phrase_time_limit=10,
+                timeout=8,
+                phrase_time_limit=12,
             )
 
         print("[STT] Processing...")
