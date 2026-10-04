@@ -1,8 +1,10 @@
 """Interfaces Task 4 needs from Task 2 (Student A) and Task 3 (Student B).
 
-This file is the contract. Task 4 codes against it; the sandbox simulator
-(sim_backend.SandboxSim) implements it today, and Student A's platform should
-implement the same four methods so goto_object() runs unchanged on it.
+This file is the contract. goto_object() codes against RobotAPI.
+task_4/robot_adapter.PlatformRobot implements it on top of Student A's
+FrontCameraPipeline + MotionSkills (the methods it calls on A's objects are
+listed at the bottom). The dev-only sandbox (sim_backend.SandboxSim) also
+implements it.
 """
 from __future__ import annotations
 
@@ -49,13 +51,26 @@ class RobotAPI(Protocol):
 #   - color: one of perception.COLOR_NAMES or null when the user gave none.
 #
 # Executor call (blocking, in the executor thread, not the sim thread):
-#     from goto_object import goto_object
-#     result = goto_object(robot, cmd["class"], cmd.get("color"),
-#                          cancel_event=executor_cancel_event)
+#     from task_4 import run_goto_object_action
+#     result = run_goto_object_action(action, cancel_event=executor_cancel_event)
+#     # action is the parsed dict above; the platform robot is the one
+#     # registered by task_4/run_integrated.py.
 #     # result.status is "SUCCESS" or "FAIL"; move on to the next action.
+#
+# Platform access for B's move/turn (A's MotionSkills):
+#     from task_4 import get_robot
+#     skills = get_robot().skills
 #
 # A "stop" command sets executor_cancel_event; goto_object then stops the
 # robot and returns status FAIL reason=cancelled within one frame.
 #
 # Logging split: Task 3 prints [CMD] / [EXEC] / [DONE];
 # Task 4 prints [SEARCH] / [DETECT] / [FOUND] / [MISSION].
+#
+# What the adapter calls on Student A's objects (Task 2) -----------------------
+#   FrontCameraPipeline: .get_latest_frame() -> (rgb, sim_t) | None,
+#                        .width, .height, .camera_name, .model
+#   MotionSkills:        .set_velocity(vx, vy, wz), .stop(), .turn(angle_deg),
+#                        .get_base_pose() -> (x, y, yaw), .get_sim_time(),
+#                        .release_control(); optional .is_idle() (used if added)
+#   Task 4 TEST executor only: MotionSkills.move(vx, vy, wz, duration)
