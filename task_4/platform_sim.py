@@ -1,4 +1,4 @@
-"""Lock-step runner of the Task 2 platform for Task 4 evaluation (Student C).
+"""Task 2 platform without the viewer, for Task 4 evaluation (Student C).
 
 Uses Student A's actual Task 2 pieces:
   * scene      : task_2/scene/task2_scene.xml (composed with the robot exactly
@@ -8,9 +8,11 @@ Uses Student A's actual Task 2 pieces:
   * policy/PD  : play.py's observation builder, joint remapping, ONNX policy
                  and compute_pd_torques, called the same way as in play.py
 
-Only the outer loop is Task 4's: it advances physics only after each YOLO
-call returns, so results do not depend on laptop speed. The real-time path
-(play.py's own loop, used for the video) is task_4/run_integrated.py.
+Only the outer loop is Task 4's (run_eval.run_realtime): it steps physics
+paced to the wall clock like play.py, while goto_object() runs in a worker
+thread, so evaluation behaves like the live system. Unlike play.py it can
+start the robot at any pose for each trial. The interactive path (play.py's
+own loop, used for the video) is task_4/run_integrated.py.
 
 Not reproduced from play.py: the browser panel's live tuning/randomisation
 and motor-delay sliders (they default to the nominal values used here).
@@ -61,7 +63,7 @@ def build_model(scene_xml: Path = TASK2_SCENE, map_name: str = "task2_scene") ->
 
 
 class PlatformSim:
-    """Task 2 platform stepped in lock-step. Exposes RobotAPI via self.robot."""
+    """Task 2 platform, stepped by the caller. Exposes RobotAPI via self.robot."""
 
     def __init__(self, scene_xml: Path = TASK2_SCENE, spawn=(0.0, 0.0, 0.0),
                  width: int = 320, height: int = 240, perception_hz: float = 15.0):
