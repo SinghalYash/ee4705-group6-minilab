@@ -48,7 +48,7 @@ EXECUTOR = "task4_test"
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--executor", choices=["task4_test", "task3"], default=EXECUTOR)
+    ap.add_argument("--executor", choices=["task4_test", "task3", "task5"], default=EXECUTOR)
     ap.add_argument("--actions-json", default=None,
                     help="task4_test only: run this fixed action list (B's schema) "
                          "once instead of typing; no LLM needed")
@@ -76,12 +76,26 @@ def main():
 
         def start_chat():
             robot.wait_until_ready()
+
             if args.executor == "task3":
                 import executor_task3
                 executor_task3.start(on_exit=on_exit)
+
+            elif args.executor == "task5":
+                from task_5.chat_vlm import run_vlm_chat
+
+                run_vlm_chat()
+
+                if on_exit:
+                    on_exit()
+
             else:
                 import executor_task4_test
-                executor_task4_test.run_chat(robot, args.actions_json, on_exit=on_exit)
+                executor_task4_test.run_chat(
+                    robot,
+                    args.actions_json,
+                    on_exit=on_exit,
+                )
 
         threading.Thread(target=start_chat, name="chat", daemon=True).start()
 
