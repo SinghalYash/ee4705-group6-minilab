@@ -3,14 +3,43 @@ import os
 from openai import OpenAI, BadRequestError
 from command_schema import COMMAND_SCHEMA
 
-from executor import execute_actions
+
+# ------------------------------------------------------------------
+# LLM provider configuration
+# ------------------------------------------------------------------
+
+LLM_PROVIDER = os.getenv(
+    "LLM_PROVIDER",
+    "qwen",
+).lower()
 
 
-# client = OpenAI()
+if LLM_PROVIDER == "openai":
 
-client = OpenAI(api_key=os.environ["DASHSCOPE_API_KEY"],
-                base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1")
-MODEL = "qwen3-vl-flash"
+    client = OpenAI(
+        api_key=os.environ["OPENAI_API_KEY"]
+    )
+
+    MODEL = "gpt-5-mini"
+
+elif LLM_PROVIDER == "qwen":
+
+    client = OpenAI(
+        api_key=os.environ["DASHSCOPE_API_KEY"],
+        base_url=(
+            "https://dashscope-intl.aliyuncs.com/"
+            "compatible-mode/v1"
+        ),
+    )
+
+    MODEL = "qwen3-vl-flash"
+
+else:
+
+    raise ValueError(
+        f"Unknown LLM_PROVIDER: {LLM_PROVIDER}. "
+        "Use 'openai' or 'qwen'."
+    )
 
 
 SYSTEM_PROMPT = """
@@ -69,15 +98,28 @@ RULES
 - Reject empty commands.
 - Reject non-English commands.
 - Do not invent capabilities.
+- If a command is ambiguous or missing essential information,
+  reject it and put a concise clarification question in "reason".
+- Use the "chat" action for ordinary conversational replies that
+  do not require robot motion.
 """
 
 
 def _call(messages, response_format):
+
+    kwargs = {
+        "model": MODEL,
+        "messages": messages,
+        "response_format": response_format,
+    }
+
+    if LLM_PROVIDER == "qwen":
+        kwargs["extra_body"] = {
+            "enable_thinking": False
+        }
+
     return client.chat.completions.create(
-        model=MODEL,
-        messages=messages,
-        response_format=response_format,
-        extra_body={"enable_thinking": False},  # structured output isn't supported in Qwen thinking mode
+        **kwargs
     )
 
 
@@ -126,8 +168,11 @@ def print_command(result):
     """Print the parsed command in the format required by the MiniLab."""
 
     if not result["accepted"]:
-        reason = result.get("reason") or "unknown"
+        reason = result.get("reason") or "Please clarify your command."
+
         print(f"[CMD] rejected reason={reason}")
+        print(f"Robot: {reason}")
+
         return
 
     action_strings = []
@@ -177,5 +222,3 @@ if __name__ == "__main__":
 
     print(json.dumps(result, indent=2))
     print_command(result)
-
-    execute_actions(result)
