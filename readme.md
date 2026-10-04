@@ -594,16 +594,21 @@ task_4/results/eval_summary.md
 
 ---
 
-## 9. Results and evidence files
+## 9. Results, Evidence and Demonstration Videos
 
 | Path | Contents |
 |---|---|
-| `task_2/evidence/` | Task 2 detection/demo evidence |
+| `task_2/evidence/Task 2_Demo.mp4` | Task 2 demonstration: scene, onboard camera, timed motion and closed-loop turning |
+| `task_2/evidence/` | Task 2 detection and supporting evidence |
 | `task_2/yolo_test/` | YOLO annotated test outputs |
+| `task_3/results/Video_Task 3.mp4` | Task 3 demonstration: typed English commands, multi-step autonomous execution and command rejection |
 | `task_3/results/openai_results.csv` | OpenAI parser evaluation |
-| `task_3/results/ollama_results.csv` | Ollama parser evaluation |
-| `task_4/results/eval_summary.md` | Task 4 evaluation summary |
-| `task_4/results/frames/` | Saved evaluation frames, when generated |
+| `task_3/results/ollama_results.csv` | Ollama/Qwen parser evaluation |
+| `Video task4.mp4` | Task 4 demonstration: YOLO detection, colour grounding, autonomous search and object approach |
+| `task_4/results/eval_summary.md` | Task 4 quantitative evaluation summary |
+| `task_4/results/frames/` | Saved Task 4 evaluation frames |
+| `task_5/evidence/Video_Bonus.mp4` | Bonus demonstration: speech input, VLM/VQA, YOLO–VLM comparison and multi-goal navigation |
+| `task_5/evidence/bbox_comparison.png` | YOLO versus VLM bounding-box comparison |
 
 ---
 
