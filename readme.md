@@ -27,8 +27,7 @@ Instruction ──► Task 3: LLM Parser ──► Executor ──► Task 2 / T
 9. [Results and evidence files](#9-results-and-evidence-files)
 10. [Troubleshooting](#10-troubleshooting)
 11. [Contributions](#11-contributions)
-12. [AI usage](#12-ai-usage)
-13. [References](#13-references)
+12. [References](#12-references)
 
 ---
 
@@ -81,7 +80,6 @@ The final development environment used:
 |---|---|
 | Simulator | MuJoCo |
 | Python | 3.12.14 |
-| Conda environment | `ee4705` |
 | Front camera | `dog_front_camera` |
 | Camera resolution | `320 × 240` |
 | Perception rate | 15 Hz |
@@ -647,19 +645,8 @@ The shared interoperability contract is defined in:
 interfaces.py
 ```
 
----
 
-## 12. AI usage
-
-AI coding assistants were used during development for coding assistance, debugging, explanation and report drafting. All submitted code and generated material were reviewed, tested and understood by the group.
-
-The complete **AI Usage Declaration** is provided in the group report.
-
-No API credentials are stored in this repository.
-
----
-
-## 13. References
+## 12. References
 
 ### Platform and software
 
@@ -680,8 +667,4 @@ No API credentials are stored in this repository.
 5. J. Liang et al., **“Code as Policies: Language Model Programs for Embodied Control,”** IEEE ICRA, 2023.
 6. A. Brohan et al., **“RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control,”** CoRL, 2023.
 
----
 
-## Acknowledgements
-
-The quadruped simulation and pre-trained locomotion policy are based on the [`quadruped_mujoco`](https://github.com/aoqianz/quadruped_mujoco) example platform. The project extends the platform with the custom MiniLab scene, onboard perception pipeline, reusable motion skills, language interface and autonomous object-search behaviour required for EE4705 MiniLab 1.3.
